@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, session
-from app.models import User
+from app.models import User, Post, Comment, Vote
 from app.db import get_db
 import sys
 
@@ -60,4 +60,72 @@ def login():
     session['loggedIn'] = True
 
     return jsonify(id = user.id)
+
+@bp.route('/comments', methods=['POST'])
+def comment():
+    data = request.get_json() # gets submiited comment data from front end
+    db = get_db() # opens connection to db
+
+    try:
+        # create a new comment
+        newComment = Comment(
+            comment_text = data['comment_text'],
+            post_id = data['post_id'],
+            user_id = session.get('user_id') # gets id of currently loggedIn user
+        )
+
+        db.add(newComment) # preps new record to be added to db
+        db.commit() # acts as INSERT and attempts to add record to db
+    except:
+        print(sys.exc_info()[0]) # prints error
+
+        db.rollback() # discards pending commit if it fails(i.e. validation error)
+        return jsonify(message = 'Comment failed!'), 500
+    
+    return jsonify(id = newComment.id) # returns id of new comment to front end if created successfully. 
+
+@bp.route('/posts/upvote', methods=['PUT'])
+def upvote():
+    data = request.get_json()
+    db = get_db()
+
+    try:
+        # create a new vote with incoming id and session id
+        newVote = Vote(
+            post_id = data['post_id'],
+            user_id = session.get('user_id')
+        )
+
+        db.add(newVote)
+        db.commit()
+    except:
+        print(sys.exc_info()[0])
+
+        db.rollback()
+        return jsonify(message = 'Upvote failed!'), 500
+    
+    return '', 204
+
+@bp.route('/posts', methods=['POST'])
+def create():
+    data = request.get_json()
+    db = get_db()
+
+    try:
+        # create a new post
+        newPost = Post(
+            title = data['title'],
+            post_url = data['post_url'],
+            user_id = session.get('user_id')
+        )
+
+        db.add(newPost)
+        db.commit()
+    except:
+        print(sys.exc_info()[0])
+
+        db.rollback()
+        return jsonify(message = 'Post failed!'), 500
+    
+    return jsonify(id = newPost.id)
 
