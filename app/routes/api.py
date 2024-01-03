@@ -154,6 +154,7 @@ def update(id):
     return '', 204
 
 @bp.route('/posts/<id>', methods=['DELETE'])
+@login_required
 def delete(id):
     db = get_db()
 
